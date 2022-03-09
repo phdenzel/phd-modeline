@@ -1,12 +1,14 @@
 ;;; phd-modeline.el --- My modeline customization
-;;
+;; ----------------------------------------------
 ;;; Author: phdenzel
 ;;
+;;
 ;;; Commentary:
+;; ------------
 ;; This is my module for customising the Emacs mode-line.
 ;;
 ;;; Installation (for example):
-;;
+;; ----------------------------
 ;; (add-to-list 'load-path "~/phd-modeline/")
 ;; (require 'phd-modeline)
 ;; (phd-modeline-mode 1)
@@ -17,16 +19,14 @@
 ;; (use-package phd-modeline
 ;;   :ensure nil
 ;;   :load-path "~/phd-modeline/"
-;;   :after (all-the-icons)
+;;   :after (all-the-icons mu4e)
 ;;   :hook (after-init . phd-modeline-mode)
 ;;   :bind (("C-x |" . phd-modeline-mode))
-;;   :config
-;;   ...
-;;   )
-
-
+;;   :config (...))
+;;
 ;;; Code:
 (require 'all-the-icons)
+
 
 (defgroup phd-modeline nil
   "A minimal mode-line."
@@ -46,11 +46,10 @@
       (if phd-modeline-format
           (setq-default mode-line-format phd-modeline-format)
         (setq-default mode-line-format phd-modeline-format-default))
-    (setq-default mode-line-format phd-modeline-format-original)
-    ))
+    (setq-default mode-line-format phd-modeline-format-original)))
 
 
-;; ------ Style
+;; --- Style
 (defface phd-modeline-buffer-name-face
   `((t (:inherit 'minibuffer-prompt)))
   "The phd-modeline normal buffer name face"
@@ -154,8 +153,7 @@
 (defcustom phd-modeline-bar-width 17
   "The width of the phd-modeline bar (only in GUI)."
   :type 'integer
-  :set (lambda (sym val)
-         (set sym (if (> val 0) val 1)))
+  :set (lambda (sym val) (set sym (if (> val 0) val 1)))
   :group 'phd-modeline)
 
 (defcustom phd-modeline-bar-data-func 'phd-ml/bar-tri-data
@@ -167,15 +165,67 @@ Choose between
   :set (lambda (sym val) (fset sym val))
   :group 'phd-modeline)
 
-(defcustom mu-count-unread nil
-  ""
-  )
+(defcustom phd-modeline-mail-update-interval 60
+  "Update interval of phd-modeline's mail component."
+  :type 'integer
+  :group 'phd-modeline)
+
+(defvar phd-modeline-mail-update-timer nil
+  "Interval timer for phd-modeline's mail component.")
+
+(defvar phd-modeline-mail-count-string ""
+  "Count string for phd-modeline's mail component.")
+
+(defun phd-ml/set-mu4e-command (&optional sym val op where)
+  "Set `phd-modeline-mu4e-command' using custom variables:
+- `phd-modeline-mu4e-mu-executable'
+- `phd-modeline-mu4e-find'
+- `phd-modeline-mu4e-unread-query'"
+  (when (and (boundp 'phd-modeline-mu4e-mu-executable)
+             (boundp 'phd-modeline-mu4e-find)
+             (boundp 'phd-modeline-mu4e-unread-query))
+    (let ((exec phd-modeline-mu4e-mu-executable)
+          (subc phd-modeline-mu4e-find)
+          (qry phd-modeline-mu4e-unread-query))
+      (setq phd-modeline-mu4e-command
+            (format "%s %s \"%s\"" exec subc qry)))))
+
+(defcustom phd-modeline-mu4e-mu-executable (executable-find "mu")
+  "The mu4e executable."
+  :type 'string
+  :set (lambda (sym val)
+         (set sym val)
+         (phd-ml/set-mu4e-command))
+  :group 'phd-modeline)
+
+(defcustom phd-modeline-mu4e-find "find"
+  "The mu4e find sub-command."
+  :type 'string
+  :set (lambda (sym val)
+         (set sym val)
+         (phd-ml/set-mu4e-command))
+  :group 'phd-modeline)
+
+(defcustom phd-modeline-mu4e-unread-query "maildir:/INBOX AND flag:unread"
+  "The mu4e query for counting the unread messages."
+  :type 'string
+  :set (lambda (sym val)
+         (set sym val)
+         (phd-ml/set-mu4e-command))
+  :group 'phd-modeline)
+
+(defcustom phd-modeline-mu4e-command (phd-ml/set-mu4e-command)
+  "The full mu-find query built from custom variables:
+- `phd-modeline-mu4e-mu-executable'
+- `phd-modeline-mu4e-find'
+- `phd-modeline-mu4e-unread-query'"
+  :type 'string
+  :group 'phd-modeline)
 
 (defcustom phd-modeline-use-icons t
   "Enable all icon drawing functionality.
 TODO: Not yet implemented."
   :type 'boolean
-  ;;:set (lambda (sym val))
   :group 'phd-modeline)
 
 (define-minor-mode phd-modeline-column-mode
@@ -192,9 +242,16 @@ TODO: Not yet implemented."
 
 (define-minor-mode phd-modeline-mail-mode
   "Enable unread mail indicator functionality in phd-modeline."
-  :group 'phd-modeline
   :global t
-  :keymap phd-modeline-mode-map)
+  :group 'phd-modeline
+  (setq phd-modeline-mail-count-string "")
+  (and phd-modeline-mail-update-timer
+       (cancel-timer phd-modeline-mail-update-timer))
+  (when phd-modeline-mail-mode
+    (setq phd-modeline-mail-update-timer
+          (run-with-timer nil phd-modeline-mail-update-interval
+                          'phd-modeline-mail-update-handler))
+    (phd-modeline-mail-update-handler)))
 
 
 (setq all-the-icons-scale-factor 1.1)
@@ -209,7 +266,7 @@ TODO: Not yet implemented."
 ;;   (defun all-the-icons-alltheicon (&rest _) "" ""))
 
 
-;; ------ Utilities
+;; --- Utilities
 ;; Frame/window focussing
 (defvar phd-ml/selected-window (frame-selected-window))
 
@@ -306,20 +363,46 @@ TODO: Not yet implemented."
                   "\n")
           'pbm t :foreground color :background bgcolor :ascent 'center))))))
 
+
 ;; Misc
 (defun phd-ml/s-replace (old new s)
-  "Replace OLD with NEW in S."
+  "Replace OLD with NEW in string S."
   (replace-regexp-in-string (regexp-quote old) new s t t))
+
+(defun phd-ml/s-count-regexp (regexp s &optional start end)
+  "Count REGEXP expression in string S from START to END."
+  (save-match-data
+    (with-temp-buffer
+      (insert s)
+      (goto-char (point-min))
+      (count-matches regexp (or start 1) (or end (point-max))))))
 
 
 ;; Mail
-(defun phd-ml/mu4e-unread-count ()
-  "Count all unread mails."
-  nil
-  )
+(defun phd-ml/mu4e-count-unread ()
+  "Count all unread mails using `phd-modeline-mu4e-command'."
+  (phd-ml/set-mu4e-command)
+  (let* ((cmd phd-modeline-mu4e-command)
+         (read (shell-command-to-string cmd)))
+    (phd-ml/s-count-regexp "\n" read)))
+
+(defun phd-modeline-mail-update ()
+  "Update unread mail count."
+  (interactive)
+  (let ((count (phd-ml/mu4e-count-unread)))
+    (if (eq count 0)
+        (setq count "")
+      (setq count (format " · %s" count)))
+    (message "Mail count%s" count)
+    (setq phd-modeline-mail-count-string count)))
+
+(defun phd-modeline-mail-update-handler ()
+  "Handler for updating unread mail count."
+  (phd-modeline-mail-update)
+  (sit-for 0))
 
 
-;; ------ Components
+;; --- Components (for phd-modeline-format)
 ;; Space fillers
 (defun phd-modeline-whitespace (&optional number)
   "Add NUMBER of spaces in phd-modeline."
@@ -328,6 +411,15 @@ TODO: Not yet implemented."
                     'face (if (phd-ml/selected-window-active-p)
                               'phd-modeline-space-face
                             'phd-modeline-inactive-face))))
+
+(defun phd-modeline-hairspace (&optional number)
+  "Add NUMBER of spaces in phd-modeline."
+  (unless number (setq number 1))
+  (list (propertize (make-string number (string-to-char " "))
+                    'face (if (phd-ml/selected-window-active-p)
+                              'phd-modeline-space-face
+                            'phd-modeline-inactive-face))))
+
 
 (defun phd-modeline-space-between (&optional reserve)
   "Add spaces inbetween left-aligned and right-aligned components.
@@ -341,8 +433,7 @@ The right aligned components use pad RESERVE number of spaces on the right."
                                   ,(+ reserve (string-width
                                          (if (listp mode-name)
                                              (car mode-name)
-                                           mode-name))
-                                      ))))))
+                                           mode-name))))))))
 
 (defun phd-modeline-dot-separator (&optional pad-l pad-r)
   "Add dot character in phd-modeline.
@@ -350,12 +441,12 @@ Optionally pad the separator by PAD-L on the left, PAD-R on the right."
   (unless pad-l (setq pad-l 0))
   (unless pad-r (setq pad-r 0))
   (list
-   (phd-modeline-whitespace pad-l)
+   (phd-modeline-hairspace pad-l)
    (propertize "·"
                'face (if (phd-ml/selected-window-active-p)
                          'phd-modeline-space-face
                        'phd-modeline-inactive-face))
-   (phd-modeline-whitespace pad-r)))
+   (phd-modeline-hairspace pad-r)))
 
 
 ;; Bar
@@ -428,8 +519,7 @@ Optionally pad the separator by PAD-L on the left, PAD-R on the right."
        (propertize "%p "
                    'face (if (phd-ml/selected-window-active-p)
                              'phd-modeline-buffer-percentage-face
-                           'phd-modeline-inactive-face)))
-   ))
+                           'phd-modeline-inactive-face)))))
 
 (defun phd-modeline-media-info ()
   "Show image dimension when in `image-mode'."
@@ -505,7 +595,6 @@ Optionally pad the separator by PAD-L on the left, PAD-R on the right."
     (setq vcbranch (phd-ml/s-replace ":" "" vcbranch))
     (setq vcbranch (phd-ml/s-replace "-" "" vcbranch))
     (list
-     ;;(phd-modeline-whitespace)
      (propertize vcbranch
                  'face (if (phd-ml/selected-window-active-p)
                            'phd-modeline-vc-branch-face
@@ -519,8 +608,13 @@ Optionally pad the separator by PAD-L on the left, PAD-R on the right."
 
 (defun phd-modeline-mail-status ()
   "Fetch mu4e status info for phd-modeline."
-  nil
-  )
+  (when phd-modeline-mail-mode
+    (let ((count phd-modeline-mail-count-string))
+      (list
+       (propertize count
+                   'face (if (phd-ml/selected-window-active-p)
+                             'phd-modeline-mail-status-face
+                           'phd-modeline-inactive-face))))))
 
  
 ;; Icons
@@ -531,8 +625,7 @@ Optionally pad the separator by PAD-L on the left, PAD-R on the right."
      (all-the-icons-octicon "lock"
                             :face (if (phd-ml/selected-window-active-p)
                                       'phd-modeline-buffer-read-only-face
-                                    'phd-modeline-inactive-face)
-                            :v-adjust -0.05)
+                                    'phd-modeline-inactive-face))
      (phd-modeline-whitespace))))
 
 (defun phd-modeline-buffer-modified-icon ()
@@ -543,8 +636,7 @@ Optionally pad the separator by PAD-L on the left, PAD-R on the right."
      (all-the-icons-faicon "floppy-o"
                             :face (if (phd-ml/selected-window-active-p)
                                       'phd-modeline-buffer-modified-face
-                                    'phd-modeline-inactive-face)
-                            :v-adjust -0.05))))
+                                    'phd-modeline-inactive-face)))))
 
 (defvar vc-status-icon-set-alist
   '((Git . all-the-icons-alltheicon)
@@ -574,7 +666,7 @@ If no arguments are given, only return logo icon."
                                        'phd-modeline-inactive-face))
                    t))
     (when (> with-sep 0)
-      (add-to-list 'vc-icons (phd-modeline-dot-separator 1 1) t))
+      (add-to-list 'vc-icons (phd-modeline-dot-separator 2 2) t))
     (when (> with-branch 0)
       (add-to-list 'vc-icons
                    (propertize (all-the-icons-octicon "git-branch")
@@ -582,13 +674,16 @@ If no arguments are given, only return logo icon."
                                          'phd-modeline-vc-branch-face
                                        'phd-modeline-inactive-face))
                    t))
-    vc-icons
-    ))
+    vc-icons))
 
 (defun phd-modeline-mail-icon ()
   "Iconify mail status in phd-modeline."
-  nil
-)
+  (when phd-modeline-mail-mode
+    (list
+     (propertize (all-the-icons-octicon "mail")
+                 'face (if (phd-ml/selected-window-active-p)
+                           'phd-modeline-mail-icon-face
+                         'phd-modeline-inactive-face)))))
 
 (defun phd-modeline-mode-icon ()
   "Iconify major mode in phd-modeline."
@@ -617,7 +712,8 @@ If no arguments are given, only return logo icon."
    '(:eval (phd-modeline-buffer-name))
    '(:eval (phd-modeline-whitespace))
    '(:eval (phd-modeline-buffer-position))
-   '(:eval (phd-modeline-space-between 1))
+   '(:eval (phd-modeline-whitespace))
+   '(:eval (phd-modeline-space-between 2))
    '(:eval (phd-modeline-major-mode))
    '(:eval (phd-modeline-whitespace)))
   "Default format of the phd-modeline.")
@@ -628,8 +724,9 @@ If no arguments are given, only return logo icon."
 
 
 ;; --- Customization
-;; My own configuration looks like:
-;; (phd-modeline-column-mode t)
+;; My personal configuration:
+;; (setq phd-modeline-column-mode t
+;;       phd-modeline-mail-mode t)
 ;; (setq phd-modeline-format
 ;;       (list
 ;;        '(:eval (phd-modeline-bar))
@@ -647,6 +744,7 @@ If no arguments are given, only return logo icon."
 ;;        '(:eval (phd-modeline-vc-status))
 ;;        '(:eval (phd-modeline-mail-icon))
 ;;        '(:eval (phd-modeline-mail-status))
+;;        '(:eval (phd-modeline-whitespace))
 ;;        '(:eval (phd-modeline-space-between 4))
 ;;        '(:eval (phd-modeline-mode-icon))
 ;;        '(:eval (phd-modeline-whitespace))
