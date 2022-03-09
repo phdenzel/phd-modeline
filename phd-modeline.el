@@ -34,6 +34,22 @@
   :link '(url-link :tag "Homepage" "https://github.com/phdenzel/phd-modeline"))
 
 
+;; --- Mode
+(defvar phd-modeline-mode-map (make-sparse-keymap))
+
+(define-minor-mode phd-modeline-mode
+  "Toggle phd-modeline on or off."
+  :group 'phd-modeline
+  :global t
+  :keymap phd-modeline-mode-map
+  (if phd-modeline-mode
+      (if phd-modeline-format
+          (setq-default mode-line-format phd-modeline-format)
+        (setq-default mode-line-format phd-modeline-format-default))
+    (setq-default mode-line-format phd-modeline-format-original)
+    ))
+
+
 ;; ------ Style
 (defface phd-modeline-buffer-name-face
   `((t (:inherit 'minibuffer-prompt)))
@@ -75,11 +91,6 @@
   "The phd-modeline buffer percentage face"
   :group 'phd-modeline)
 
-(defface phd-modeline-icon-face
-  `((t (:inherit 'mode-line)))
-  "The phd-modeline buffer percentage face"
-  :group 'phd-modeline)
-
 (defface phd-modeline-inactive-face
   `((t (:inherit 'mode-line-inactive)))
   "The phd-modeline face for inactive frames"
@@ -103,6 +114,31 @@
 (defface phd-modeline-flycheck-error-face
   `((t (:inherit 'success)))
   "The phd-modeline flycheck face for errors."
+  :group 'phd-modeline)
+
+(defface phd-modeline-vc-icon-face
+  `((t (:inherit 'font-lock-keyword-face)))
+  "The phd-modeline version control icon face"
+  :group 'phd-modeline)
+
+(defface phd-modeline-vc-branch-face
+  `((t (:inherit 'warning)))
+  "The phd-modeline version control info face."
+  :group 'phd-modeline)
+
+(defface phd-modeline-vc-status-face
+  `((t (:inherit 'font-lock-constant-face)))
+  "The phd-modeline version control info face."
+  :group 'phd-modeline)
+
+(defface phd-modeline-mail-icon-face
+  `((t (:inherit 'font-lock-string-face)))
+  "The phd-modeline mail icon face"
+  :group 'phd-modeline)
+
+(defface phd-modeline-mail-status-face
+  `((t (:inherit 'font-lock-string-face)))
+  "The phd-modeline mail info face."
   :group 'phd-modeline)
 
 (defface phd-modeline-bar-face
@@ -131,12 +167,38 @@ Choose between
   :set (lambda (sym val) (fset sym val))
   :group 'phd-modeline)
 
+(defcustom mu-count-unread nil
+  ""
+  )
+
 (defcustom phd-modeline-use-icons t
-  "Disable all icon drawing fuctionality.
+  "Enable all icon drawing functionality.
 TODO: Not yet implemented."
   :type 'boolean
   ;;:set (lambda (sym val))
   :group 'phd-modeline)
+
+(define-minor-mode phd-modeline-column-mode
+  "Enable buffer column position functionality in phd-modeline."
+  :group 'phd-modeline
+  :global t
+  :keymap phd-modeline-mode-map)
+
+(define-minor-mode phd-modeline-percentage-mode
+  "Enable buffer position percentage functionality in phd-modeline."
+  :group 'phd-modeline
+  :global t
+  :keymap phd-modeline-mode-map)
+
+(define-minor-mode phd-modeline-mail-mode
+  "Enable unread mail indicator functionality in phd-modeline."
+  :group 'phd-modeline
+  :global t
+  :keymap phd-modeline-mode-map)
+
+
+(setq all-the-icons-scale-factor 1.1)
+(setq all-the-icons-default-adjust 0)
 
 ;; for terminal mode
 ;; (unless window-system
@@ -178,6 +240,7 @@ TODO: Not yet implemented."
    (if (frame-focus-state)
        (phd-ml/set-selected-window)
      (phd-ml/reset-selected-window))))
+
 
 ;; Bitmapping
 (defun phd-ml/bar-rec-data (width height)
@@ -243,12 +306,25 @@ TODO: Not yet implemented."
                   "\n")
           'pbm t :foreground color :background bgcolor :ascent 'center))))))
 
+;; Misc
+(defun phd-ml/s-replace (old new s)
+  "Replace OLD with NEW in S."
+  (replace-regexp-in-string (regexp-quote old) new s t t))
+
+
+;; Mail
+(defun phd-ml/mu4e-unread-count ()
+  "Count all unread mails."
+  nil
+  )
+
 
 ;; ------ Components
 ;; Space fillers
-(defun phd-modeline-whitespace ()
-  "Format buffer name in phd-modeline depending on its state."
-  (list (propertize " "
+(defun phd-modeline-whitespace (&optional number)
+  "Add NUMBER of spaces in phd-modeline."
+  (unless number (setq number 1))
+  (list (propertize (make-string number ?\s)
                     'face (if (phd-ml/selected-window-active-p)
                               'phd-modeline-space-face
                             'phd-modeline-inactive-face))))
@@ -267,6 +343,19 @@ The right aligned components use pad RESERVE number of spaces on the right."
                                              (car mode-name)
                                            mode-name))
                                       ))))))
+
+(defun phd-modeline-dot-separator (&optional pad-l pad-r)
+  "Add dot character in phd-modeline.
+Optionally pad the separator by PAD-L on the left, PAD-R on the right."
+  (unless pad-l (setq pad-l 0))
+  (unless pad-r (setq pad-r 0))
+  (list
+   (phd-modeline-whitespace pad-l)
+   (propertize "·"
+               'face (if (phd-ml/selected-window-active-p)
+                         'phd-modeline-space-face
+                       'phd-modeline-inactive-face))
+   (phd-modeline-whitespace pad-r)))
 
 
 ;; Bar
@@ -325,22 +414,22 @@ The right aligned components use pad RESERVE number of spaces on the right."
                'face (if (phd-ml/selected-window-active-p)
                          'phd-modeline-buffer-line-face
                        'phd-modeline-inactive-face))
-   (phd-modeline-whitespace)
-   (propertize "C:[%3c]"
-               'face (if (phd-ml/selected-window-active-p)
-                         'phd-modeline-buffer-column-face
-                       'phd-modeline-inactive-face))
-   (phd-modeline-whitespace)
-   (propertize "@"
-               'face (if (phd-ml/selected-window-active-p)
-                         'mode-line
-                       'phd-modeline-inactive-face))
-   (phd-modeline-whitespace)
-   (propertize "%p"
-               'face (if (phd-ml/selected-window-active-p)
-                         'phd-modeline-buffer-percentage-face
-                       'phd-modeline-inactive-face))
-   (phd-modeline-whitespace)))
+   (when phd-modeline-column-mode
+     (propertize " · C:[%3c]"
+                 'face (if (phd-ml/selected-window-active-p)
+                           'phd-modeline-buffer-column-face
+                         'phd-modeline-inactive-face)))
+   (when phd-modeline-percentage-mode
+       (propertize " @"
+                   'face (if (phd-ml/selected-window-active-p)
+                             'mode-line
+                           'phd-modeline-inactive-face)))
+   (when phd-modeline-percentage-mode
+       (propertize "%p "
+                   'face (if (phd-ml/selected-window-active-p)
+                             'phd-modeline-buffer-percentage-face
+                           'phd-modeline-inactive-face)))
+   ))
 
 (defun phd-modeline-media-info ()
   "Show image dimension when in `image-mode'."
@@ -392,12 +481,48 @@ The right aligned components use pad RESERVE number of spaces on the right."
                             'mouse-1 (lambda () (interactive) (flycheck-list-errors))))
      (phd-modeline-whitespace))))
 
-(defun phd-modeline-git-vc ()
-  "Git repository status info for phd-modeline."
+(defvar vc-status-symbol-alist
+  '((up-to-date       . nil)
+    (edited           . "!")
+    (needs-update     . "@")
+    (needs-merge      . "x")
+    (unlocked-changes . "&")
+    (added            . "+")
+    (removed          . "-")
+    (conflict         . "#")
+    (missing          . "%")
+    (ignored          . ";")
+    (unregistered     . "?"))
+  "String symbol map for `vs-state' output.")
+
+(defun phd-modeline-vc-status ()
+  "Fetch git repository status info for phd-modeline."
+  (when-let ((vc vc-mode)
+             (vcb (vc-backend buffer-file-name))
+             (vcs (vc-state buffer-file-name)))
+    (setq vcs-symbol (cdr (assoc vcs vc-status-symbol-alist)))
+    (setq vcbranch (phd-ml/s-replace (format "%s" vcb) "" vc))
+    (setq vcbranch (phd-ml/s-replace ":" "" vcbranch))
+    (setq vcbranch (phd-ml/s-replace "-" "" vcbranch))
+    (list
+     ;;(phd-modeline-whitespace)
+     (propertize vcbranch
+                 'face (if (phd-ml/selected-window-active-p)
+                           'phd-modeline-vc-branch-face
+                         'phd-modeline-inactive-face))
+     (when vcs-symbol
+       (propertize (format " [%s]" vcs-symbol)
+                   'face (if (phd-ml/selected-window-active-p)
+                             'phd-modeline-vc-status-face
+                           'phd-modeline-inactive-face)))
+     (phd-modeline-whitespace))))
+
+(defun phd-modeline-mail-status ()
+  "Fetch mu4e status info for phd-modeline."
   nil
   )
 
-
+ 
 ;; Icons
 (defun phd-modeline-buffer-lock-icon ()
   "Iconify read-only buffer in phd-modeline."
@@ -421,15 +546,57 @@ The right aligned components use pad RESERVE number of spaces on the right."
                                     'phd-modeline-inactive-face)
                             :v-adjust -0.05))))
 
+(defvar vc-status-icon-set-alist
+  '((Git . all-the-icons-alltheicon)
+    (SVN . all-the-icons-fileicon)
+    (Hg . all-the-icons-fileicon))
+  "Icon map for `vs-backend' icons.")
+
+(defun phd-modeline-vc-icon (&optional with-logo with-sep with-branch)
+  "Iconify git repository status in phd-modeline if WITH-LOGO is positive.
+Include separator if WITH-SEP is positive.
+Include branch icon if WITH-BRANCH is positive.
+If no arguments are given, only return logo icon."
+  (unless with-logo (setq with-logo 0))
+  (unless with-sep (setq with-sep 0))
+  (unless with-branch (setq with-branch 0))
+  (when (and (not with-logo) (not with-branch)) (setq with-logo 1))
+  (when-let ((vc vc-mode)
+             (vcb (vc-backend buffer-file-name))
+             (vcs (vc-state buffer-file-name)))
+    (fset 'vcb-icon-set (cdr (assoc vcb vc-status-icon-set-alist)))
+    (setq vc-icons nil)
+    (when (> with-logo 0)
+      (add-to-list 'vc-icons
+                   (propertize (format "%s" (vcb-icon-set (downcase (format "%s" vcb))))
+                               'face (if (phd-ml/selected-window-active-p)
+                                         'phd-modeline-vc-icon-face
+                                       'phd-modeline-inactive-face))
+                   t))
+    (when (> with-sep 0)
+      (add-to-list 'vc-icons (phd-modeline-dot-separator 1 1) t))
+    (when (> with-branch 0)
+      (add-to-list 'vc-icons
+                   (propertize (all-the-icons-octicon "git-branch")
+                               'face (if (phd-ml/selected-window-active-p)
+                                         'phd-modeline-vc-branch-face
+                                       'phd-modeline-inactive-face))
+                   t))
+    vc-icons
+    ))
+
+(defun phd-modeline-mail-icon ()
+  "Iconify mail status in phd-modeline."
+  nil
+)
+
 (defun phd-modeline-mode-icon ()
   "Iconify major mode in phd-modeline."
   (list
-   (all-the-icons-icon-for-mode
-    major-mode
-    ;; :face (if (phd-ml/selected-window-active-p)
-    ;;           'phd-modeline-icon-face
-    ;;         'phd-modeline-inactive-face)
-   )))
+   (if (phd-ml/selected-window-active-p)
+       (all-the-icons-icon-for-mode major-mode)
+     (all-the-icons-icon-for-mode major-mode
+                                  :face 'phd-modeline-inactive-face))))
 
 
 ;; --- Formats
@@ -445,11 +612,11 @@ The right aligned components use pad RESERVE number of spaces on the right."
 
 (defvar phd-modeline-format-default
   (list
+   '(:eval (phd-modeline-bar))
    '(:eval (phd-modeline-whitespace))
    '(:eval (phd-modeline-buffer-name))
    '(:eval (phd-modeline-whitespace))
    '(:eval (phd-modeline-buffer-position))
-   '(:eval (phd-modeline-media-info))
    '(:eval (phd-modeline-space-between 1))
    '(:eval (phd-modeline-major-mode))
    '(:eval (phd-modeline-whitespace)))
@@ -459,43 +626,34 @@ The right aligned components use pad RESERVE number of spaces on the right."
   "The customizable phd-modeline format."
   :type (list))
 
-(setq phd-modeline-format
-      (list
-       '(:eval (phd-modeline-bar))
-       '(:eval (phd-modeline-whitespace))
-       '(:eval (phd-modeline-buffer-lock-icon))
-       '(:eval (phd-modeline-buffer-name))
-       '(:eval (phd-modeline-buffer-modified-icon))
-       '(:eval (phd-modeline-whitespace))
-       '(:eval (phd-modeline-buffer-position))
-       '(:eval (phd-modeline-media-info))
-       '(:eval (phd-modeline-flycheck-status))
-       '(:eval (phd-modeline-space-between 4))
-       '(:eval (phd-modeline-mode-icon))
-       '(:eval (phd-modeline-whitespace))
-       '(:eval (phd-modeline-major-mode))
-       '(:eval (phd-modeline-whitespace))
-       ))
 
-;; Left-aligned:
-;; <Flyspell_asIcon>
-;; Right-aligned:
-;; <major-mode>
+;; --- Customization
+;; My own configuration looks like:
+;; (phd-modeline-column-mode t)
+;; (setq phd-modeline-format
+;;       (list
+;;        '(:eval (phd-modeline-bar))
+;;        '(:eval (phd-modeline-whitespace))
+;;        '(:eval (phd-modeline-buffer-lock-icon))
+;;        '(:eval (phd-modeline-buffer-name))
+;;        '(:eval (phd-modeline-buffer-modified-icon))
+;;        '(:eval (phd-modeline-whitespace))
+;;        '(:eval (phd-modeline-buffer-position))
+;;        '(:eval (phd-modeline-media-info))
+;;        '(:eval (phd-modeline-whitespace))
+;;        '(:eval (phd-modeline-flycheck-status))
+;;        '(:eval (phd-modeline-whitespace 4))
+;;        '(:eval (phd-modeline-vc-icon 1 1 1))
+;;        '(:eval (phd-modeline-vc-status))
+;;        '(:eval (phd-modeline-mail-icon))
+;;        '(:eval (phd-modeline-mail-status))
+;;        '(:eval (phd-modeline-space-between 4))
+;;        '(:eval (phd-modeline-mode-icon))
+;;        '(:eval (phd-modeline-whitespace))
+;;        '(:eval (phd-modeline-major-mode))
+;;        '(:eval (phd-modeline-whitespace))
+;;        ))
 
-;; --- Mode
-(defvar phd-modeline-mode-map (make-sparse-keymap))
-
-(define-minor-mode phd-modeline-mode
-  "Toggle phd-modeline on or off."
-  :group 'phd-modeline
-  :global t
-  :keymap phd-modeline-mode-map
-  (if phd-modeline-mode
-      (if phd-modeline-format
-          (setq-default mode-line-format phd-modeline-format)
-        (setq-default mode-line-format phd-modeline-format-default))
-    (setq-default mode-line-format phd-modeline-format-original)
-    ))
 
 (provide 'phd-modeline)
 ;;; phd-modeline.el ends here
