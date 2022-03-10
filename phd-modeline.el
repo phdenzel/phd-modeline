@@ -19,7 +19,7 @@
 ;; (use-package phd-modeline
 ;;   :ensure nil
 ;;   :load-path "~/phd-modeline/"
-;;   :after (all-the-icons mu4e)
+;;   :after all-the-icons
 ;;   :hook (after-init . phd-modeline-mode)
 ;;   :bind (("C-x |" . phd-modeline-mode))
 ;;   :config (...))
@@ -393,7 +393,7 @@ TODO: Not yet implemented."
     (if (eq count 0)
         (setq count "")
       (setq count (format " · %s" count)))
-    (message "Mail count%s" count)
+    ;; (message "Mail count%s" count)
     (setq phd-modeline-mail-count-string count)))
 
 (defun phd-modeline-mail-update-handler ()

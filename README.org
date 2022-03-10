@@ -1,0 +1,113 @@
+#+AUTHOR: phdenzel
+#+TITLE: phd-modeline.el
+#+DATE: 2022-03-10 Thu
+#+OPTIONS: author:nil title:t date:nil timestamp:nil toc:nil num:nil \n:nil
+
+* phd-modeline.el
+
+  This is my customization of the Emacs ~mode-line~.
+
+  It provides a minor-mode for toggling the ~phd-modeline~ which
+  includes more human-readable features (opposed to the default
+  "encodings").
+
+  
+  In particular it features:
+  - indicator bar (see screenshot; rectangular, triangular, arrow-shape, etc.)
+  - buffer state icons (read-only & modified)
+  - version control identification and iconification
+  - unread mail indicator (provided you use ~mu4e~)
+  - major-mode iconification and descriptione
+
+  For the iconification, it uses the ~all-the-icons~ package which is
+  the only requirement.
+
+
+* Installation
+
+  Download this git repository, e.g. to your home directory.  In your
+  ~init.el~ (or equivalent Emacs startup-file), use
+
+  #+begin_src emacs-lisp
+    (add-to-list 'load-path "~/phd-modeline/")
+    (require 'phd-modeline)
+    (phd-modeline-mode 1)
+    (global-set-key (kbd "C-x |") 'phd-modeline-mode)
+  #+end_src
+
+  or in case you're using ~use-package~
+
+  #+begin_src emacs-lisp
+    (use-package phd-modeline
+      :ensure nil
+      :load-path "~/phd-modeline/"
+      :after (all-the-icons mu4e)
+      :hook (after-init . phd-modeline-mode)
+      :bind (("C-x |" . phd-modeline-mode)))
+  #+end_src
+
+  
+* Configuration examples
+
+  The default ~phd-modeline~ format is still quite conservative and
+  minimalistic. However, many features can be included in your
+  configuration and customization.
+
+  Just like for ~mode-line~, customizations can be applied by setting
+  the ~phd-modeline-format~ (~mode-line-format~ in case of
+  ~mode-line~):
+
+  #+begin_src emacs-lisp
+    (setq phd-modeline-format
+          (list
+           '(:eval (phd-modeline-bar))
+           ;; analogously list all components here
+           ))
+  #+end_src
+
+
+  For instance, my personal configuration looks like
+
+  #+begin_src emacs-lisp
+    (use-package phd-modeline
+      :ensure nil
+      :load-path "~/local/phd-modeline/"
+      :after all-the-icons
+      :hook (after-init . phd-modeline-mode)
+      :bind (("C-x |" . phd-modeline-mode))
+      :config
+
+      (require 'phd-mu4e-setup)  ;; this is my personal mu4e setup
+      (setq phd-modeline-mu4e-unread-query phd-mu4e-inbox-query)
+      (phd-modeline-mail-mode t)
+
+      (phd-modeline-column-mode t)
+      (setq phd-modeline-format
+            (list
+             '(:eval (phd-modeline-bar))
+             '(:eval (phd-modeline-whitespace))
+             '(:eval (phd-modeline-buffer-lock-icon))
+             '(:eval (phd-modeline-buffer-name))
+             '(:eval (phd-modeline-buffer-modified-icon))
+             '(:eval (phd-modeline-whitespace))
+             '(:eval (phd-modeline-buffer-position))
+             '(:eval (phd-modeline-media-info))
+             '(:eval (phd-modeline-whitespace))
+             '(:eval (phd-modeline-flycheck-status))
+             '(:eval (phd-modeline-whitespace 4))
+             '(:eval (phd-modeline-vc-icon 1 1 1))
+             '(:eval (phd-modeline-vc-status))
+             '(:eval (phd-modeline-whitespace 4))
+             '(:eval (phd-modeline-mail-icon))
+             '(:eval (phd-modeline-mail-status))
+             '(:eval (phd-modeline-whitespace))
+             '(:eval (phd-modeline-space-between 4))
+             '(:eval (phd-modeline-mode-icon))
+             '(:eval (phd-modeline-whitespace))
+             '(:eval (phd-modeline-major-mode))
+             '(:eval (phd-modeline-whitespace)))))
+  #+end_src
+
+
+  #+ATTR_HTML: :width 400 :style margin-left: auto; margin-right: auto;
+  [[./imgs/screenshot_example.png]]
