@@ -3,7 +3,6 @@
 #+DATE: 2022-03-10 Thu
 #+OPTIONS: author:nil title:t date:nil timestamp:nil toc:nil num:nil \n:nil
 
-* phd-modeline.el
 
   This is my customization of the Emacs ~mode-line~.
 
