@@ -384,7 +384,10 @@ TODO: Not yet implemented."
   (phd-ml/set-mu4e-command)
   (let* ((cmd phd-modeline-mu4e-command)
          (read (shell-command-to-string cmd)))
-    (phd-ml/s-count-regexp "\n" read)))
+    (if (string-equal read "error: no matches for search expression\n")
+        0
+      (phd-ml/s-count-regexp "\n" read))
+    ))
 
 (defun phd-modeline-mail-update ()
   "Update unread mail count."
