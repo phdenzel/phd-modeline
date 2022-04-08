@@ -395,7 +395,7 @@ TODO: Not yet implemented."
   (let ((count (phd-ml/mu4e-count-unread)))
     (if (eq count 0)
         (setq count "")
-      (setq count (format " · %s" count)))
+      (setq count (format " · %s" count)))
     ;; (message "Mail count%s" count)
     (setq phd-modeline-mail-count-string count)))
 
@@ -418,7 +418,7 @@ TODO: Not yet implemented."
 (defun phd-modeline-hairspace (&optional number)
   "Add NUMBER of spaces in phd-modeline."
   (unless number (setq number 1))
-  (list (propertize (make-string number (string-to-char " "))
+  (list (propertize (make-string number (string-to-char " ")) ;; " "
                     'face (if (phd-ml/selected-window-active-p)
                               'phd-modeline-space-face
                             'phd-modeline-inactive-face))))
@@ -444,12 +444,12 @@ Optionally pad the separator by PAD-L on the left, PAD-R on the right."
   (unless pad-l (setq pad-l 0))
   (unless pad-r (setq pad-r 0))
   (list
-   (phd-modeline-hairspace pad-l)
+   (phd-modeline-whitespace pad-l)
    (propertize "·"
                'face (if (phd-ml/selected-window-active-p)
                          'phd-modeline-space-face
                        'phd-modeline-inactive-face))
-   (phd-modeline-hairspace pad-r)))
+   (phd-modeline-whitespace pad-r)))
 
 
 ;; Bar
@@ -509,7 +509,7 @@ Optionally pad the separator by PAD-L on the left, PAD-R on the right."
                          'phd-modeline-buffer-line-face
                        'phd-modeline-inactive-face))
    (when phd-modeline-column-mode
-     (propertize " · C:[%3c]"
+     (propertize " · C:[%3c]"
                  'face (if (phd-ml/selected-window-active-p)
                            'phd-modeline-buffer-column-face
                          'phd-modeline-inactive-face)))
@@ -603,7 +603,7 @@ Optionally pad the separator by PAD-L on the left, PAD-R on the right."
                            'phd-modeline-vc-branch-face
                          'phd-modeline-inactive-face))
      (when vcs-symbol
-       (propertize (format " [%s]" vcs-symbol)
+       (propertize (format "[%s]" vcs-symbol)
                    'face (if (phd-ml/selected-window-active-p)
                              'phd-modeline-vc-status-face
                            'phd-modeline-inactive-face)))
