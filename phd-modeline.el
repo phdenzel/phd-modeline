@@ -384,7 +384,7 @@ TODO: Not yet implemented."
   (phd-ml/set-mu4e-command)
   (let* ((cmd phd-modeline-mu4e-command)
          (read (shell-command-to-string cmd)))
-    (if (string-equal read "error: no matches for search expression\n")
+    (if (string-equal read "no matches for search expression\n")
         0
       (phd-ml/s-count-regexp "\n" read))
     ))
