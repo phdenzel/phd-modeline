@@ -26,6 +26,8 @@
 ;;
 ;;; Code:
 (require 'all-the-icons)
+(when (display-graphic-p)
+  (require 'all-the-icons))
 
 
 (defgroup phd-modeline nil
@@ -39,20 +41,28 @@
 
 (define-minor-mode phd-modeline-mode
   "Toggle phd-modeline on or off."
+  :init-value nil
   :group 'phd-modeline
   :global t
   :keymap phd-modeline-mode-map
   (if phd-modeline-mode
       (if phd-modeline-format
-          (setq-default mode-line-format phd-modeline-format)
-        (setq-default mode-line-format phd-modeline-format-default))
-    (setq-default mode-line-format phd-modeline-format-original)))
+          (progn
+            (setq-default mode-line-format phd-modeline-format)
+            (message "phd-modeline-mode activated!"))
+        (progn
+          (setq-default mode-line-format phd-modeline-format-default)
+          (message "phd-modeline-mode activated!")))
+    (progn
+      (setq-default mode-line-format phd-modeline-format-original)
+      (message "phd-modeline deactivated!")))
+  (force-mode-line-update))
 
 
 ;; --- Style
 (defface phd-modeline-buffer-name-face
   `((t (:inherit 'minibuffer-prompt)))
-  "The phd-modeline normal buffer name face"
+  "The phd-modeline normal buffer name face."
   :group 'phd-modeline)
 
 (defface phd-modeline-space-face
@@ -62,42 +72,42 @@
 
 (defface phd-modeline-buffer-modified-face
   `((t (:inherit 'font-lock-function-name-face)))
-  "The phd-modeline modified buffer name face"
+  "The phd-modeline modified buffer name face."
   :group 'phd-modeline)
 
 (defface phd-modeline-buffer-read-only-face
   `((t (:inherit 'font-lock-keyword-face)))
-  "The phd-modeline read-only buffer name face"
+  "The phd-modeline read-only buffer name face."
   :group 'phd-modeline)
 
 (defface phd-modeline-buffer-line-face
   `((t (:inherit 'mode-line)))
-  "The phd-modeline buffer line face"
+  "The phd-modeline buffer line face."
   :group 'phd-modeline)
 
 (defface phd-modeline-buffer-column-face
   `((t (:inherit 'mode-line)))
-  "The phd-modeline buffer column face"
+  "The phd-modeline buffer column face."
   :group 'phd-modeline)
 
 (defface phd-modeline-buffer-percentage-face
   `((t (:inherit 'mode-line)))
-  "The phd-modeline buffer percentage face"
+  "The phd-modeline buffer percentage face."
   :group 'phd-modeline)
 
 (defface phd-modeline-mode-face
   `((t (:inherit 'mode-line)))
-  "The phd-modeline buffer percentage face"
+  "The phd-modeline buffer percentage face."
   :group 'phd-modeline)
 
 (defface phd-modeline-inactive-face
   `((t (:inherit 'mode-line-inactive)))
-  "The phd-modeline face for inactive frames"
+  "The phd-modeline face for inactive frames."
   :group 'phd-modeline)
 
 (defface phd-modeline-highlight-face
   `((t (:inherit 'mode-line-highlight)))
-  "The phd-modeline highlight face"
+  "The phd-modeline highlight face."
   :group 'phd-modeline)
 
 (defface phd-modeline-flycheck-success-face
@@ -117,7 +127,7 @@
 
 (defface phd-modeline-vc-icon-face
   `((t (:inherit 'font-lock-keyword-face)))
-  "The phd-modeline version control icon face"
+  "The phd-modeline version control icon face."
   :group 'phd-modeline)
 
 (defface phd-modeline-vc-branch-face
@@ -132,7 +142,7 @@
 
 (defface phd-modeline-mail-icon-face
   `((t (:inherit 'font-lock-string-face)))
-  "The phd-modeline mail icon face"
+  "The phd-modeline mail icon face."
   :group 'phd-modeline)
 
 (defface phd-modeline-mail-status-face
@@ -142,7 +152,7 @@
 
 (defface phd-modeline-bar-face
   `((t (:inherit 'phd-modeline-buffer-name-face)))
-  "The phd-modeline bar face"
+  "The phd-modeline bar face."
   :group 'phd-modeline)
 
 (defcustom phd-modeline-height 25
@@ -242,8 +252,8 @@ TODO: Not yet implemented."
 
 (define-minor-mode phd-modeline-mail-mode
   "Enable unread mail indicator functionality in phd-modeline."
-  :global t
   :group 'phd-modeline
+  :global t
   (setq phd-modeline-mail-count-string "")
   (and phd-modeline-mail-update-timer
        (cancel-timer phd-modeline-mail-update-timer))
@@ -251,7 +261,8 @@ TODO: Not yet implemented."
     (setq phd-modeline-mail-update-timer
           (run-with-timer nil phd-modeline-mail-update-interval
                           'phd-modeline-mail-update-handler))
-    (phd-modeline-mail-update-handler)))
+    (phd-modeline-mail-update-handler))
+  )
 
 
 (setq all-the-icons-scale-factor 1.1)
@@ -397,12 +408,12 @@ TODO: Not yet implemented."
         (setq count "")
       (setq count (format " · %s" count)))
     ;; (message "Mail count%s" count)
-    (setq phd-modeline-mail-count-string count)))
+    (setq phd-modeline-mail-count-string count))
+  )
 
 (defun phd-modeline-mail-update-handler ()
   "Handler for updating unread mail count."
-  (phd-modeline-mail-update)
-  (sit-for 0))
+  (phd-modeline-mail-update))
 
 
 ;; --- Components (for phd-modeline-format)
@@ -418,7 +429,7 @@ TODO: Not yet implemented."
 (defun phd-modeline-hairspace (&optional number)
   "Add NUMBER of spaces in phd-modeline."
   (unless number (setq number 1))
-  (list (propertize (make-string number (string-to-char " ")) ;; " "
+  (list (propertize (make-string number (string-to-char " ")) ;; or hairspace " "
                     'face (if (phd-ml/selected-window-active-p)
                               'phd-modeline-space-face
                             'phd-modeline-inactive-face))))
@@ -534,11 +545,15 @@ Optionally pad the separator by PAD-L on the left, PAD-R on the right."
 
 (defun phd-modeline-major-mode ()
   "Format major mode name in phd-modeline."
-  (list
-   (propertize mode-name
-               'face (if (phd-ml/selected-window-active-p)
-                         'phd-modeline-mode-face
-                       'phd-modeline-inactive-face))))
+  (let* ((modename-string
+          (pcase mode-name
+            ((pred stringp) mode-name)
+            ((pred listp) (car mode-name)))))
+    (list
+     (propertize modename-string
+                 'face (if (phd-ml/selected-window-active-p)
+                           'phd-modeline-mode-face
+                         'phd-modeline-inactive-face)))))
 
 (defun phd-modeline-flycheck-status ()
   "Flycheck status info for phd-modeline."
@@ -757,4 +772,5 @@ If no arguments are given, only return logo icon."
 
 
 (provide 'phd-modeline)
+(provide 'phd-modeline-mode)
 ;;; phd-modeline.el ends here
