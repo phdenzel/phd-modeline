@@ -39,6 +39,7 @@
 ;; --- Mode
 (defvar phd-modeline-mode-map (make-sparse-keymap))
 
+;;;###autoload
 (define-minor-mode phd-modeline-mode
   "Toggle phd-modeline on or off."
   :init-value nil
