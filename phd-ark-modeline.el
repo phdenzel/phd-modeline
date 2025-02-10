@@ -800,6 +800,11 @@ If no arguments are given, only return logo icon."
       (message "phd-ark-modeline deactivated!")))
   (force-mode-line-update))
 
+;;;###autoload
+(when load-file-name
+  (add-to-list 'load-path
+	       (file-name-as-directory (file-name-directory load-file-name))))
+
 (provide 'phd-ark-modeline)
 (provide 'phd-ark-modeline-mode)
 ;;; phd-ark-modeline.el ends here
