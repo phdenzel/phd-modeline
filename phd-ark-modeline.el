@@ -135,7 +135,7 @@
   :group 'phd-ark-modeline)
 
 (defface phd-ark-modeline-bar-face
-  `((t (:inherit 'phd-ark-modeline-buffer-name-face)))
+  `((t (:inherit 'minibuffer-prompt)))
   "The phd-ark-modeline bar face."
   :group 'phd-ark-modeline)
 
@@ -476,14 +476,24 @@ Optionally pad the separator by PAD-L on the left, PAD-R on the right."
     (let ((width phd-ark-modeline-bar-width)
           (height phd-ark-modeline-height ))
       (when (and (numberp width) (numberp height))
-        (setq phd-ark-modeline-active-bar
-              (phd-ark-ml/bar-image 'phd-ark-modeline-bar-face width height)
-              phd-ark-modeline-inactive-bar
-              (phd-ark-ml/bar-image 'phd-ark-modeline-inactive-face width height)))))
+        (setq phd-ark-modeline-active-bar (phd-ark-ml/bar-image 'phd-ark-modeline-bar-face width height)
+              phd-ark-modeline-inactive-bar (phd-ark-ml/bar-image 'phd-ark-modeline-inactive-face width height)))))
   (if (phd-ark-ml/selected-window-active-p)
       phd-ark-modeline-active-bar
     phd-ark-modeline-inactive-bar))
 
+(defun phd-ark-modeline-marker (&optional fnt height)
+  "A font-based bar for the mode-line with FNT."
+  (unless fnt (setq fnt (all-the-icons-nerd-pl "left-hard-divider")))
+  (unless height (setq height phd-ark-modeline-height))
+  (list
+   (propertize fnt
+	       'height height
+	       'face (if (phd-ark-ml/selected-window-active-p)
+			 'phd-ark-modeline-buffer-name-face
+		       'phd-ark-modeline-inactive-face))
+   (phd-ark-modeline-whitespace)
+   ))
 
 ;; Text info
 (defun phd-ark-modeline-buffer-name ()
@@ -522,8 +532,10 @@ Optionally pad the separator by PAD-L on the left, PAD-R on the right."
                'face (if (phd-ark-ml/selected-window-active-p)
                          'phd-ark-modeline-buffer-line-face
                        'phd-ark-modeline-inactive-face))
+   ;; (when phd-ark-modeline-column-mode
+   ;;   (phd-ark-modeline-dot-separator 1 1))
    (when phd-ark-modeline-column-mode
-     (propertize " · C:[%3c]"
+     (propertize "·C:[%3c]"
                  'face (if (phd-ark-ml/selected-window-active-p)
                            'phd-ark-modeline-buffer-column-face
                          'phd-ark-modeline-inactive-face)))
@@ -729,13 +741,13 @@ If no arguments are given, only return logo icon."
 (defvar phd-ark-modeline-format-default
   (list
    '(:eval (phd-ark-modeline-padding))
-   '(:eval (phd-ark-modeline-bar))
+   '(:eval (phd-ark-modeline-marker))
    '(:eval (phd-ark-modeline-whitespace))
    '(:eval (phd-ark-modeline-buffer-name))
    '(:eval (phd-ark-modeline-whitespace))
    '(:eval (phd-ark-modeline-buffer-position))
    '(:eval (phd-ark-modeline-whitespace 4))
-   '(:eval (phd-ark-modeline-vc-icon 1 1 1))
+   '(:eval (phd-ark-modeline-vc-icon 0 0 1))
    '(:eval (phd-ark-modeline-vc-status))
    '(:eval (phd-ark-modeline-space-between 2))
    '(:eval (phd-ark-modeline-major-mode))
@@ -756,7 +768,7 @@ If no arguments are given, only return logo icon."
 ;; (setq phd-ark-modeline-format
 ;;       (list
 ;;        '(:eval (phd-ark-modeline-padding))
-;;        '(:eval (phd-ark-modeline-bar))
+;;        '(:eval (phd-ark-modeline-marker ""))
 ;;        '(:eval (phd-ark-modeline-whitespace))
 ;;        '(:eval (phd-ark-modeline-buffer-lock-icon))
 ;;        '(:eval (phd-ark-modeline-buffer-name))
@@ -800,11 +812,7 @@ If no arguments are given, only return logo icon."
       (message "phd-ark-modeline deactivated!")))
   (force-mode-line-update))
 
-;;;###autoload
-(when load-file-name
-  (add-to-list 'load-path
-	       (file-name-as-directory (file-name-directory load-file-name))))
 
 (provide 'phd-ark-modeline)
-(provide 'phd-ark-modeline-mode)
+;;(provide 'phd-ark-modeline-mode)
 ;;; phd-ark-modeline.el ends here
